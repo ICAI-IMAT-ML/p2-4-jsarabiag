@@ -40,7 +40,6 @@ class LinearRegressor:
             )
         if np.ndim(X) == 1:
             X = X.reshape(-1, 1)
-
         X_with_bias = np.insert(
             X, 0, 1, axis=1
         )  # Adding a column of ones for intercept
@@ -65,10 +64,12 @@ class LinearRegressor:
             None: Modifies the model's coefficients and intercept in-place.
         """
         # Replace this code with the code you did in the previous laboratory session
-
-        # Store the intercept and the coefficients of the model
-        self.intercept = None
-        self.coefficients = None
+        
+        w_y_b = np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X) @ y
+        b = w_y_b[0]
+        w = w_y_b[1:]
+        self.intercept = b
+        self.coefficients = w
 
     def fit_gradient_descent(self, X, y, learning_rate=0.01, iterations=1000):
         """
@@ -93,17 +94,17 @@ class LinearRegressor:
 
         # Implement gradient descent (TODO)
         for epoch in range(iterations):
-            predictions = None
+            predictions = np.dot(X, np.append(self.intercept, self.coefficients))
             error = predictions - y
 
             # TODO: Write the gradient values and the updates for the paramenters
-            gradient = None
-            self.intercept -= None
-            self.coefficients -= None
+            gradient = (2/m) * np.dot(X.T, error)
+            self.intercept -= learning_rate * gradient[0]
+            self.coefficients -= learning_rate * gradient[1:]
 
             # TODO: Calculate and print the loss every 10 epochs
             if epoch % 1000 == 0:
-                mse = None
+                mse = np.mean(error**2)
                 print(f"Epoch {epoch}: MSE = {mse}")
 
     def predict(self, X):
@@ -126,7 +127,14 @@ class LinearRegressor:
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
 
-        return None
+        if np.ndim(X) == 1:
+            # TODO: Predict when X is only one variable
+            predictions = self.intercept + self.coefficients * X
+        else:
+            # TODO: Predict when X is more than one variable
+            predictions = self.intercept + X @ self.coefficients 
+        return predictions
+
 
 
 def evaluate_regression(y_true, y_pred):
@@ -142,16 +150,18 @@ def evaluate_regression(y_true, y_pred):
     """
 
     # R^2 Score
-    # TODO
-    r_squared = None
+    # TODO: Calculate R^2
+    rss = np.sum((y_true - y_pred) **2)
+    tss = np.sum((y_true - np.mean(y_true)) **2)
+    r_squared = 1 - (rss/tss)
 
     # Root Mean Squared Error
-    # TODO
-    rmse = None
+    # TODO: Calculate RMSE
+    rmse = np.sqrt(np.sum((y_true - y_pred)**2) / len(y_true))
 
     # Mean Absolute Error
-    # TODO
-    mae = None
+    # TODO: Calculate MAE
+    mae = np.sum(abs(y_true - y_pred)) / len(y_true)
 
     return {"R2": r_squared, "RMSE": rmse, "MAE": mae}
 
@@ -172,19 +182,20 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
     X_transformed = X.copy()
     for index in sorted(categorical_indices, reverse=True):
         # TODO: Extract the categorical column
-        categorical_column = None
+        categorical_column = X_transformed[:, index]
 
         # TODO: Find the unique categories (works with strings)
-        unique_values = None
+        unique_values = np.unique(categorical_column)
 
         # TODO: Create a one-hot encoded matrix (np.array) for the current categorical column
-        one_hot = None
+        one_hot = np.array([(categorical_column == val).astype(int) for val in unique_values]).T
 
         # Optionally drop the first level of one-hot encoding
         if drop_first:
             one_hot = one_hot[:, 1:]
 
         # TODO: Delete the original categorical column from X_transformed and insert new one-hot encoded columns
-        X_transformed = None
+        X_transformed = np.delete(X_transformed, index, axis=1)
+        X_transformed = np.hstack((X_transformed[:, :index], one_hot, X_transformed[:, index:]))
 
     return X_transformed
